@@ -2,6 +2,8 @@ from tkinter import *
 from tkinter import messagebox
 import random
 import pyperclip
+import json
+
 
 # ---------------------------- PASSWORD GENERATOR ------------------------------- #
 def pass_generate():
@@ -23,12 +25,19 @@ def pass_generate():
 
     pass_ent.insert(0, password)
     pyperclip.copy(password)
+
+
 # ---------------------------- SAVE PASSWORD ------------------------------- #
 def save():
     website = website_ent.get()
     email = email_ent.get()
     password = pass_ent.get()
-
+    new_data = {
+        website: {
+            "email": email,
+            "password": password,
+        }
+    }
     if len(website) == 0 or len(password) == 0:
         messagebox.showinfo(message="Please don't leave any fields empty!")
     else:
@@ -37,10 +46,35 @@ def save():
                                                               f"Password: {password}\n"
                                                               f"Is it ok to save?")
         if is_ok:
-            with open("data.txt", "a") as data_file:
-                data_file.write(f"{website} | {email} | {password} \n")
+            try:
+                with open("data.json", "r") as data_file:
+                    data = json.load(data_file)
+            except FileNotFoundError:
+                with open("data.json", "w") as data_file:
+                    json.dump(new_data, data_file, indent=4)
+            else:
+                data.update(new_data)
+
+                with open("data.json", "w") as data_file:
+                    json.dump(data, data_file, indent=4)
+            finally:
                 website_ent.delete(0, END)
                 pass_ent.delete(0, END)
+
+
+# ---------------------------- SEARCH ------------------------------- #
+def search():
+    website = website_ent.get()
+    try:
+        with open("data.json", "r") as data_file:
+            data = json.load(data_file)
+            email = data[website]["email"]
+            password = data[website]["password"]
+            messagebox.showinfo(title=website, message=f"Email: {email}\nPassword: {password}")
+    except KeyError:
+        messagebox.showerror(title="Error", message="No Website Found!")
+    except FileNotFoundError:
+        messagebox.showerror(title="Error", message="No Data File Found!")
 
 
 # ---------------------------- UI SETUP ------------------------------- #
@@ -61,8 +95,8 @@ email_lbl.grid(column=0, row=2)
 pass_lbl = Label(text="Password:")
 pass_lbl.grid(column=0, row=3)
 
-website_ent = Entry(width=60)
-website_ent.grid(column=1, row=1, columnspan=2)
+website_ent = Entry(width=41)
+website_ent.grid(column=1, row=1)
 website_ent.focus()
 
 email_ent = Entry(width=60)
@@ -77,5 +111,8 @@ pass_btn.grid(column=2, row=3)
 
 add_btn = Button(text="Add", width=51, command=save)
 add_btn.grid(column=1, row=4, columnspan=2)
+
+search_btn = Button(text="Search", width=15, command=search)
+search_btn.grid(column=2, row=1)
 
 window.mainloop()
